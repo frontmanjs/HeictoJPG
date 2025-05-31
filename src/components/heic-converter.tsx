@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { UploadCloud, FileImage, Download, Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import heic2any from 'heic2any';
+// Removed top-level import: import heic2any from 'heic2any';
 
 export default function HeicConverter() {
   const [heicFile, setHeicFile] = useState<File | null>(null);
@@ -87,6 +87,9 @@ export default function HeicConverter() {
     setConvertedJpgUrl(null);
 
     try {
+      // Dynamically import heic2any
+      const heic2any = (await import('heic2any')).default;
+      
       setProgressValue(30);
       const conversionResult = await heic2any({
         blob: heicFile,
