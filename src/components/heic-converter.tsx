@@ -1,3 +1,4 @@
+
 "use client";
 
 import type React from 'react';
@@ -84,33 +85,58 @@ export default function HeicConverter() {
     setProgressValue(0);
     setConvertedJpgUrl(null);
 
-    // Simulate conversion progress
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
       currentProgress += 10;
-      if (currentProgress <= 100) {
+      if (currentProgress <= 90) { // Stop at 90 to leave room for fetch
         setProgressValue(currentProgress);
       } else {
         clearInterval(progressInterval);
       }
-    }, 150); // Simulate 1.5 seconds conversion time
+    }, 130); // Adjusted timing
 
-    // Simulate conversion delay
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      setProgressValue(100);
-      // In a real app, you'd perform the HEIC to JPG conversion here.
-      // For this simulation, we'll use a placeholder image.
-      const placeholderUrl = `https://placehold.co/600x400.png`;
-      setConvertedJpgUrl(placeholderUrl);
-      setIsConverting(false);
-      toast({
-        title: "Conversion Successful!",
-        description: "Your HEIC file has been converted to JPG.",
-        action: <CheckCircle2 className="h-5 w-5 text-accent-foreground" />,
-        className: "bg-accent text-accent-foreground border-accent"
-      });
-    }, 1500);
+    setTimeout(async () => {
+      clearInterval(progressInterval); // Ensure interval is cleared
+      try {
+        // In a real app, you'd perform the HEIC to JPG conversion here.
+        // For this simulation, we'll fetch a placeholder image and convert to data URI.
+        const placeholderImageUrl = `https://placehold.co/600x400.png`;
+        const response = await fetch(placeholderImageUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch placeholder image: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setConvertedJpgUrl(reader.result as string);
+          setProgressValue(100);
+          setIsConverting(false);
+          toast({
+            title: "Conversion Successful!",
+            description: "Your HEIC file has been converted to JPG.",
+            action: <CheckCircle2 className="h-5 w-5 text-accent-foreground" />,
+            className: "bg-accent text-accent-foreground border-accent"
+          });
+        };
+        reader.onerror = () => {
+          throw new Error('Failed to read placeholder image as data URI');
+        };
+        reader.readAsDataURL(blob);
+
+      } catch (error) {
+        console.error("Conversion simulation error:", error);
+        setIsConverting(false);
+        setProgressValue(0); 
+        setConvertedJpgUrl(null);
+        toast({
+          title: "Conversion Failed",
+          description: (error as Error).message || "An error occurred during the simulated conversion.",
+          variant: "destructive",
+          action: <AlertTriangle className="h-5 w-5 text-destructive-foreground" />,
+        });
+      }
+    }, 1500); // Total simulation time
   }, [heicFile, toast]);
 
   const openFileDialog = () => {
@@ -191,6 +217,7 @@ export default function HeicConverter() {
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={() => {
+                  if (!convertedJpgUrl) return;
                   const link = document.createElement('a');
                   link.href = convertedJpgUrl;
                   link.download = heicFileInfo?.name.replace(/\.(heic|heif)$/i, '.jpg') || 'converted.jpg';
@@ -216,3 +243,4 @@ export default function HeicConverter() {
     </Card>
   );
 }
+
