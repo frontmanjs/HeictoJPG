@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { UploadCloud, FileImage, Download, Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import heic2any from 'heic2any';
 
 export default function HeicConverter() {
   const [heicFile, setHeicFile] = useState<File | null>(null);
@@ -30,7 +31,7 @@ export default function HeicConverter() {
     setIsConverting(false);
     setProgressValue(0);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Reset file input
+      fileInputRef.current.value = ""; 
     }
   }, []);
 
@@ -69,7 +70,7 @@ export default function HeicConverter() {
   };
 
   const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Necessary to allow dropping
+    event.preventDefault(); 
   };
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -82,61 +83,49 @@ export default function HeicConverter() {
     if (!heicFile) return;
 
     setIsConverting(true);
-    setProgressValue(0);
+    setProgressValue(10); 
     setConvertedJpgUrl(null);
 
-    let currentProgress = 0;
-    const progressInterval = setInterval(() => {
-      currentProgress += 10;
-      if (currentProgress <= 90) { // Stop at 90 to leave room for fetch
-        setProgressValue(currentProgress);
-      } else {
-        clearInterval(progressInterval);
-      }
-    }, 130); // Adjusted timing
+    try {
+      setProgressValue(30);
+      const conversionResult = await heic2any({
+        blob: heicFile,
+        toType: "image/jpeg",
+        quality: 0.9, // Adjust quality as needed
+      });
+      
+      setProgressValue(70);
+      const jpgBlob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
 
-    setTimeout(async () => {
-      clearInterval(progressInterval); // Ensure interval is cleared
-      try {
-        // In a real app, you'd perform the HEIC to JPG conversion here.
-        // For this simulation, we'll fetch a placeholder image and convert to data URI.
-        const placeholderImageUrl = `https://placehold.co/600x400.png`;
-        const response = await fetch(placeholderImageUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch placeholder image: ${response.statusText}`);
-        }
-        const blob = await response.blob();
-        
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setConvertedJpgUrl(reader.result as string);
-          setProgressValue(100);
-          setIsConverting(false);
-          toast({
-            title: "Conversion Successful!",
-            description: "Your HEIC file has been converted to JPG.",
-            action: <CheckCircle2 className="h-5 w-5 text-accent-foreground" />,
-            className: "bg-accent text-accent-foreground border-accent"
-          });
-        };
-        reader.onerror = () => {
-          throw new Error('Failed to read placeholder image as data URI');
-        };
-        reader.readAsDataURL(blob);
-
-      } catch (error) {
-        console.error("Conversion simulation error:", error);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setConvertedJpgUrl(reader.result as string);
+        setProgressValue(100);
         setIsConverting(false);
-        setProgressValue(0); 
-        setConvertedJpgUrl(null);
         toast({
-          title: "Conversion Failed",
-          description: (error as Error).message || "An error occurred during the simulated conversion.",
-          variant: "destructive",
-          action: <AlertTriangle className="h-5 w-5 text-destructive-foreground" />,
+          title: "Conversion Successful!",
+          description: "Your HEIC file has been converted to JPG.",
+          action: <CheckCircle2 className="h-5 w-5 text-accent-foreground" />,
+          className: "bg-accent text-accent-foreground border-accent"
         });
-      }
-    }, 1500); // Total simulation time
+      };
+      reader.onerror = () => {
+        throw new Error('Failed to read converted JPG file.');
+      };
+      reader.readAsDataURL(jpgBlob);
+
+    } catch (error) {
+      console.error("Conversion error:", error);
+      setIsConverting(false);
+      setProgressValue(0); 
+      setConvertedJpgUrl(null);
+      toast({
+        title: "Conversion Failed",
+        description: (error as Error).message || "An error occurred during the conversion.",
+        variant: "destructive",
+        action: <AlertTriangle className="h-5 w-5 text-destructive-foreground" />,
+      });
+    }
   }, [heicFile, toast]);
 
   const openFileDialog = () => {
@@ -243,4 +232,3 @@ export default function HeicConverter() {
     </Card>
   );
 }
-
